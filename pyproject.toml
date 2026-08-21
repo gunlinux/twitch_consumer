@@ -1,0 +1,81 @@
+[project]
+name = "twitch_consumer"
+version = "0.1.0"
+description = "Twitch chat producer: retwitch EventSub provider -> RabbitMQ messages queue"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiohttp>=3.13.5",
+    "asyncpg>=0.31.0",
+    "fastapi>=0.141.1",
+    "faststream[cli,rabbit]>=0.7.4",
+    "psycopg2-binary>=2.9.12",
+    "pydantic-settings>=2.15.0",
+    "uvicorn[standard]>=0.52.4",
+    "yoyo-migrations>=9.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "ruff>=0.5.0",
+    "mypy>=1.5.0",
+    "httpx>=0.28.1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+]
+
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = [
+    "BLE001",  # blind except: reconnect loop + health checks
+    "TRY002",  # bare raise in the poller retry path
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "yoyo.*",
+    "asyncpg.*",
+]
+ignore_missing_imports = true
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
