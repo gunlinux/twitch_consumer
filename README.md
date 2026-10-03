@@ -2,18 +2,21 @@
 
 Multi-user Twitch chat consumer: every Twitch account authorized via OAuth is
 stored in PostgreSQL, and the service opens one EventSub WebSocket + chat
-subscription per user, publishing chat messages to the RabbitMQ `messages`
-queue (feeding the existing `stream_stats_consumer` → `stream_stats` storage
-pipeline).
+subscription per user, publishing chat messages to a RabbitMQ `messages` fanout
+exchange bound to the durable `messages` queue (feeding the existing
+`stream_stats_consumer` → `stream_stats` storage pipeline).
 
 ```
 [Twitch EventSub WebSocket (one per user)]
     │
     ▼
 twitch_consumer  (ProviderPool of TwitchProviders)
-    │  publish JSON  (MessageCreate, source=0/twitch)
+    │  publish JSON to fanout  (MessageCreate, source=0/twitch)
     ▼
-RabbitMQ "messages" queue  (durable, default exchange)
+RabbitMQ "messages" fanout exchange  (durable)
+    │  binding  (fanout → "messages" queue)
+    ▼
+RabbitMQ "messages" queue  (durable)
     │
     ▼
 stream_stats_consumer  (FastStream, AckPolicy.MANUAL)
@@ -74,9 +77,12 @@ Payload is the same `MessageCreate` JSON the `stream_stats_consumer` validates:
 ```
 
 `source` is always `0` (twitch); `stream_id`/`channel_id` are the broadcaster
-user id of the message's channel. The durable `messages` queue is declared on
-startup (matching `stream_stats_consumer`), so the producer never publishes
-into a missing queue.
+user id of the message's channel. On startup `ensure_topology` declares the
+durable `messages` fanout exchange, the durable `messages` queue, and the
+binding between them, so the producer never publishes into a missing queue
+(fanout drops a message with no bound queue). Set `amqp_exchange` / `amqp_queue`
+to change the names. Consumers must bind their own queue to the exchange;
+`stream_stats_consumer` is updated to do so.
 
 ## Prerequisites
 

@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     users_resync_interval: float = 60.0
     amqp_dsn: AmqpDsn = AmqpDsn("amqp://user:password@localhost:5672")
     amqp_queue: str = "messages"
+    amqp_exchange: str = "messages"
     amqp_reconnect_delay: float = 5.0
 
     model_config = SettingsConfigDict(

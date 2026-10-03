@@ -7,7 +7,7 @@ from src.infrastructure.database import db_manager
 from src.infrastructure.repositories import PostgresTokenStore, PostgresUserRepository
 from src.providers.pool import ProviderPool
 from src.providers.token import TwitchAuth
-from src.publisher import ensure_queue, make_broker, publish_message
+from src.publisher import ensure_topology, make_broker, publish_message
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ async def run(settings: Settings) -> None:
     await broker.start()
     pool: ProviderPool | None = None
     try:
-        await ensure_queue(broker, settings)
+        await ensure_topology(broker, settings)
         loop = asyncio.get_running_loop()
         stop = asyncio.Event()
         for sig in (signal.SIGINT, signal.SIGTERM):

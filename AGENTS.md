@@ -7,9 +7,10 @@ Instructional context for agents working in this repository.
 `twitch_consumer` is a Python 3.12 project with two entry points:
 
 - **Chat consumer** (`python -m src`): reads Twitch chat over EventSub
-  WebSocket and publishes each chat message as JSON to the durable RabbitMQ
-  `messages` queue, feeding the downstream `stream_stats_consumer` →
-  `stream_stats` (PostgreSQL) pipeline.
+  WebSocket and publishes each chat message as JSON to a RabbitMQ `fanout`
+  exchange (`messages`), which is bound to the durable `messages` queue,
+  feeding the downstream `stream_stats_consumer` → `stream_stats` (PostgreSQL)
+  pipeline.
 - **OAuth server** (`uvicorn src.main:app` or `uv run python oauth_server.py`):
   a FastAPI app that authorizes Twitch accounts and stores them in PostgreSQL.
 
@@ -29,6 +30,9 @@ ProviderPool  (one TwitchProvider per stored user, merged stream)
     │  Message dataclass (platform="twitch" | "system")
     ▼
 publisher.publish_message  →  MessageCreate JSON (source=0, twitch)
+    ▼
+RabbitMQ "messages" fanout exchange  (durable, declared on startup)
+    │  binding: fanout → "messages" queue
     ▼
 RabbitMQ "messages" queue  (durable, declared on startup)
 
@@ -55,7 +59,7 @@ The layout mirrors [`stream_stats`](../stream_stats): `infrastructure/`
 
 - `src/__main__.py` — consumer entry (`python -m src`). Validates required
   env (`TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`), waits for the DB, applies
-  migrations, then runs the main loop: broker start → `ensure_queue` →
+  migrations, then runs the main loop: broker start → `ensure_topology` →
   `ProviderPool.start` → iterate `pool.messages()` → publish. System messages
   are logged (warning), never published. The loop races message delivery
   against the stop event so shutdown works with zero users.
@@ -83,8 +87,8 @@ The layout mirrors [`stream_stats`](../stream_stats): `infrastructure/`
   (where the callback server listens; separate from the public redirect URI so
   it can sit behind nginx), `database_url` (default matches the local `db/`
   docker container), `users_resync_interval` (default 60.0), `amqp_dsn`,
-  `amqp_queue`, `amqp_reconnect_delay`. No broadcaster/user ids — users come
-  from the database.
+  `amqp_queue`, `amqp_exchange`, `amqp_reconnect_delay`. No broadcaster/user
+  ids — users come from the database.
 - `src/infrastructure/database.py` — `DatabaseManager`: asyncpg pool for
   runtime queries + yoyo migrations (`resources/migrations/`), plus a
   module-level `db_manager`. `apply_migrations` is synchronous (psycopg2
@@ -99,9 +103,11 @@ The layout mirrors [`stream_stats`](../stream_stats): `infrastructure/`
   redirect path: GET without code/error redirects to Twitch authorization
   (302); the callback (`?code=...&state=...`) delegates to `OAuthService` and
   renders HTML pages (success or 400 error).
-- `src/publisher.py` — FastStream `RabbitBroker` factory, `ensure_queue`
-  (declares durable queue so publishes are never silently dropped),
-  `to_message_create` (Message → MessageCreate mapping), `publish_message`.
+- `src/publisher.py` — FastStream `RabbitBroker` factory, `make_exchange`
+  (durable fanout `RabbitExchange`), `ensure_topology` (declares the exchange,
+  the durable queue, and the binding between them, so publishes are never
+  silently dropped), `to_message_create` (Message → MessageCreate mapping),
+  `publish_message` (publishes to the exchange, no queue target).
   The channel id is the message's own `stream_id` (multi-user: there is no
   global channel).
 - `src/providers/pool.py` — `ProviderPool`: one `TwitchProvider` per stored
@@ -164,8 +170,8 @@ Tests live in `test/` and are configured via `[tool.pytest.ini_options]` in
 Conventions:
 - Async tests are marked `@pytest.mark.asyncio`.
 - The RabbitMQ broker is **never** touched in tests. `test/test_publish.py`
-  uses a duck-typed `FakeBroker` (records `publish` / `declare_queue` calls)
-  and plain `Settings(...)` instances.
+  uses a duck-typed `FakeBroker` (records `publish`, `declare_exchange`,
+  `declare_queue`, and queue-binding calls) and plain `Settings(...)` instances.
 - PostgreSQL is **never** touched in tests. Repositories and the token store
   are exercised via fakes (`FakeTokenStore`, `FakeUserRepo`); real SQL is
   verified manually against the local container. The Twitch provider is tested
@@ -234,6 +240,13 @@ Published payload (identical to what `stream_stats_consumer` validates):
 - `stream_id` and `channel_id` are the numeric broadcaster user id of the
   message's channel (one stored user = one watched channel).
 - `Message.platform == "system"` messages are logged, not published.
+- Transport: messages are published to the durable `fanout` exchange named by
+  `amqp_exchange` (default `messages`), with no routing key. On startup
+  `ensure_topology` declares the exchange, the durable `messages` queue
+  (`amqp_queue`), and the binding between them; a fanout with no bound queue
+  drops messages, so the binding must exist before the first publish.
+  `stream_stats_consumer` must bind its queue to the same exchange; a matching
+  `topic`/filtering scheme is deliberately not used.
 
 ## Database Schema
 
