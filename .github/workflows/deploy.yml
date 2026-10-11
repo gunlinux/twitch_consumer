@@ -1,0 +1,72 @@
+name: Deploy to Server
+
+# Fires when the "ci" quality-gate workflow passes on main: build the
+# Docker image, push it to Docker Hub tagged with the commit short SHA (plus
+# `latest`), then run .github/deploy.sh on the production server over SSH.
+#
+# The image is PUBLIC (gunlinuxloki/twitch_consumer) — no registry credentials
+# are needed on the server; it just `docker pull`s the tagged image.
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    branches: [main]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: gunlinuxloki/twitch_consumer
+
+jobs:
+  build-and-deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the tested commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Compute image tag
+        id: tag
+        env:
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: echo "sha7=${RUN_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.sha7 }}
+            ${{ env.IMAGE }}:latest
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.PRIVATE_KEY_SSH }}
+
+      # The script runs from stdin (`bash -s`) with the tag exported so the
+      # remote shell can bake it into the systemd unit. SSH listens on port 187
+      # on gunlinux.ru.
+      - name: Deploy to server
+        env:
+          DEPLOY_TAG: ${{ steps.tag.outputs.sha7 }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -p 187 "loki@gunlinux.ru" \
+            "DEPLOY_TAG=$DEPLOY_TAG bash -s" < .github/deploy.sh

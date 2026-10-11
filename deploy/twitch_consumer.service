@@ -1,0 +1,27 @@
+[Unit]
+Description=twitch_consumer
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+User=loki
+Group=loki
+
+# `-` prefix: tolerated failure (container not running yet on first start).
+ExecStartPre=-/usr/bin/docker rm -f twitch_consumer
+ExecStartPre=/usr/bin/docker pull gunlinuxloki/twitch_consumer:@IMAGE_TAG@
+# --network host: the supervisor's OAuth server binds oauth_bind_host (default
+# 127.0.0.1) so the callback sits on the host loopback where nginx (or an SSH
+# tunnel) proxies the registered redirect path to it.
+ExecStart=/usr/bin/docker run --rm --name twitch_consumer \
+  --network host \
+  --env-file /home/loki/twitch_consumer/.env \
+  gunlinuxloki/twitch_consumer:@IMAGE_TAG@
+ExecStop=/usr/bin/docker stop twitch_consumer
+Restart=on-failure
+RestartSec=3
+SyslogIdentifier=twitch_consumer
+
+[Install]
+WantedBy=multi-user.target
