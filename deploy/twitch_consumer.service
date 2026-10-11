@@ -16,7 +16,7 @@ ExecStartPre=/usr/bin/docker pull gunlinuxloki/twitch_consumer:@IMAGE_TAG@
 # tunnel) proxies the registered redirect path to it.
 ExecStart=/usr/bin/docker run --rm --name twitch_consumer \
   --network host \
-  --env-file /home/loki/twitch_consumer/.env \
+  --env-file /home/loki/projects/twitch_consumer/.env \
   gunlinuxloki/twitch_consumer:@IMAGE_TAG@
 ExecStop=/usr/bin/docker stop twitch_consumer
 Restart=on-failure

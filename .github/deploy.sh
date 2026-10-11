@@ -10,7 +10,7 @@
 # =============================================================================
 set -euo pipefail
 
-REPO_DIR="/home/loki/twitch_consumer"
+REPO_DIR="/home/loki/projects/twitch_consumer"
 BRANCH="main"
 IMAGE="gunlinuxloki/twitch_consumer"
 NEW_UNIT="twitch_consumer"
