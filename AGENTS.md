@@ -46,8 +46,9 @@ The provider (EventSub WS lifecycle: session welcome, keepalive watchdog,
 `session_reconnect` URL handoff, message_id dedup, reconnect backoff, OAuth
 token layer) was extracted from [`retwitch`](../retwitch) — do not
 reintroduce the command / notify / sender machinery or any subscription
-besides `channel.chat.message`. Two fields map events onto the `stream_stats`
-schema: `author_id` (`chatter_user_id`) and `stream_id`
+besides `channel.chat.message`. Fields map events onto the `stream_stats`
+schema: `author_id` (`chatter_user_id`), `author` (`chatter_user_name`, the
+display name) and `stream_id`
 (`broadcaster_user_id`; on Twitch the stream and the channel are the same
 entity, so `stream_id` == `channel_id`).
 

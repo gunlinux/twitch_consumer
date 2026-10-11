@@ -62,6 +62,7 @@ def test_to_message_create_maps_fields():
     assert create.source == Source.TWITCH
     assert create.message_id == "tw-1"
     assert create.author_id == "12345"
+    assert create.author == "Viewer"
     assert create.stream_id == "98765"
     assert create.channel_id == "98765"
 
@@ -135,6 +136,7 @@ async def test_publish_message_payload_is_unchanged():
         "source": 0,
         "message_id": "tw-1",
         "author_id": "12345",
+        "author": "Viewer",
         "stream_id": "98765",
         "channel_id": "98765",
     }

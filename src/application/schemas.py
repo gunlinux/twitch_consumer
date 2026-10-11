@@ -16,5 +16,6 @@ class MessageCreate(BaseModel):
     source: Source = Field(..., description="0 twitch, 1 youtube")
     message_id: str = Field(..., description="External system message id")
     author_id: str = Field(..., description="Chatter id")
+    author: str = Field("", description="Chatter display name")
     stream_id: str = Field(..., description="Stream id")
     channel_id: str = Field(..., description="Channel id")

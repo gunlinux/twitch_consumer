@@ -45,6 +45,7 @@ def to_message_create(message: Message, channel_id: str) -> MessageCreate:
         source=Source.TWITCH,
         message_id=message.id,
         author_id=message.author_id or message.author,
+        author=message.author,
         stream_id=message.stream_id or channel_id,
         channel_id=channel_id,
     )

@@ -71,6 +71,7 @@ Payload is the same `MessageCreate` JSON the `stream_stats_consumer` validates:
   "source": 0,
   "message_id": "twitch-msg-id",
   "author_id": "123456789",
+  "author": "Viewer",
   "stream_id": "987654321",
   "channel_id": "987654321"
 }
