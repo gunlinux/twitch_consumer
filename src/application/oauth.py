@@ -57,9 +57,7 @@ class OAuthService:
         user = await self._users_repo.upsert_twitch_user(
             twitch_id=twitch_id,
             login=str(profile.get("login") or ""),
-            display_name=str(
-                profile.get("display_name") or profile.get("login") or ""
-            ),
+            display_name=str(profile.get("display_name") or profile.get("login") or ""),
             profile_image_url=str(profile.get("profile_image_url") or ""),
         )
         await self._token_store.save(user.id, token)

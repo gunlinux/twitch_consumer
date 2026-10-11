@@ -98,9 +98,7 @@ class TwitchAuth:
                         await asyncio.sleep(backoff)
                         backoff = min(backoff * 2, 30.0)
                     else:
-                        raise TokenRequestError(
-                            f"Wrong response_status: {resp.status}"
-                        )
+                        raise TokenRequestError(f"Wrong response_status: {resp.status}")
         raise TokenRequestError("Token request failed after retries")
 
     async def refresh_token(self, token: TokenResponse) -> TokenResponse:
@@ -126,15 +124,18 @@ class TwitchAuth:
 
     async def get_user_profile(self, access_token: str) -> dict[str, Any]:
         """Fetch the authenticated user's profile from the Helix users API."""
-        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session, (
-            session.get(
-                USERS_URL,
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "Client-Id": self._client_id,
-                },
-            )
-        ) as resp:
+        async with (
+            aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session,
+            (
+                session.get(
+                    USERS_URL,
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Client-Id": self._client_id,
+                    },
+                )
+            ) as resp,
+        ):
             if resp.status != HTTPStatus.OK:
                 raise TokenRequestError(f"users call failed: HTTP {resp.status}")
             data = await resp.json()

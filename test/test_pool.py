@@ -94,9 +94,7 @@ async def test_resync_skips_user_without_token(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_resync_stops_removed_user(monkeypatch):
-    pool, repo = _make_pool(
-        [_user(1, "111", "chan1"), _user(2, "222", "chan2")]
-    )
+    pool, repo = _make_pool([_user(1, "111", "chan1"), _user(2, "222", "chan2")])
     monkeypatch.setattr(pool_module, "TwitchProvider", FakeProvider)
 
     await pool._resync()

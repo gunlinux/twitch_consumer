@@ -51,11 +51,12 @@ class EventSubClient:
             },
             "transport": {"method": "websocket", "session_id": session_id},
         }
-        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session, (
-            session.post(
-                EVENT_SUB_URL, headers=await self._headers(), json=data
-            )
-        ) as resp:
+        async with (
+            aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session,
+            (
+                session.post(EVENT_SUB_URL, headers=await self._headers(), json=data)
+            ) as resp,
+        ):
             logger.info("eventsub subscribe channel.chat.message: %s", resp.status)
             if resp.status != HTTPStatus.ACCEPTED:
                 raise TwitchAccessError(f"subscribe failed: HTTP {resp.status}")
@@ -79,12 +80,15 @@ class EventSubClient:
         return results
 
     async def delete_event_sub(self, eventsub_id: str) -> None:
-        async with aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session, (
-            session.delete(
-                EVENT_SUB_URL,
-                headers=await self._headers(),
-                params={"id": eventsub_id},
-            )
-        ) as resp:
+        async with (
+            aiohttp.ClientSession(timeout=_REQUEST_TIMEOUT) as session,
+            (
+                session.delete(
+                    EVENT_SUB_URL,
+                    headers=await self._headers(),
+                    params={"id": eventsub_id},
+                )
+            ) as resp,
+        ):
             if resp.status != HTTPStatus.NO_CONTENT:
                 raise TwitchAccessError(f"delete sub failed: HTTP {resp.status}")

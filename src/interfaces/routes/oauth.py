@@ -41,9 +41,7 @@ def make_router(redirect_uri: str) -> APIRouter:
     path = urlparse(redirect_uri).path or "/"
 
     @router.get(path, response_class=HTMLResponse)
-    async def oauth_endpoint(
-        request: Request, service: OAuthServiceDep
-    ) -> Response:
+    async def oauth_endpoint(request: Request, service: OAuthServiceDep) -> Response:
         if "code" not in request.query_params and "error" not in request.query_params:
             return RedirectResponse(service.authorize_url(), status_code=302)
         if "error" in request.query_params:

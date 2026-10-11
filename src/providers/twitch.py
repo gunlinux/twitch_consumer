@@ -55,9 +55,7 @@ def parse_chat_message(data: Mapping[str, Any]) -> Message | None:
     if not text:
         return None
     author = (
-        event.get("chatter_user_name")
-        or event.get("chatter_user_login")
-        or "unknown"
+        event.get("chatter_user_name") or event.get("chatter_user_login") or "unknown"
     )
     return Message(
         id=str(metadata.get("message_id") or uuid.uuid4()),
@@ -201,9 +199,9 @@ class TwitchProvider:
             case "session_keepalive":
                 logger.debug("updated last seen")
             case "session_reconnect":
-                reconnect_url = (
-                    (event.get("payload") or {}).get("session") or {}
-                ).get("reconnect_url")
+                reconnect_url = ((event.get("payload") or {}).get("session") or {}).get(
+                    "reconnect_url"
+                )
                 logger.info("session reconnect requested, url=%s", reconnect_url)
                 self._reconnect_url = reconnect_url
                 if self._socket:
