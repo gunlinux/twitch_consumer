@@ -134,6 +134,11 @@ The layout mirrors [`stream_stats`](../stream_stats): `infrastructure/`
   ["user:read:chat"]` — the only scope the chat subscription needs.
 - `oauth_server.py` — OAuth server launcher: prints the redirect URI and runs
   uvicorn on `src.main:app` (migrations run in the app lifespan).
+- `src/supervisor.py` — combined Docker entry (`python -m src.supervisor`):
+  spawns the consumer (`python -m src`) and the OAuth server
+  (`uvicorn src.main:app`) as two child processes, forwards SIGTERM/SIGINT to
+  both, and exits as soon as either stops. Separate processes because each
+  entry owns its own event loop and the `DatabaseManager` pool is loop-bound.
 
 ## Building and Running
 
@@ -155,8 +160,14 @@ Docker (two-stage build, uv installs into `/app/.venv`):
 
 ```bash
 docker build -t twitch_consumer .
-docker run --env-file .env twitch_consumer
+docker run --network host --env-file .env twitch_consumer
 ```
+
+The image `CMD` is `python -m src.supervisor`, which runs the consumer and the
+OAuth server side by side in one container (see `src/supervisor.py`). The
+OAuth server binds `oauth_bind_host` (default `127.0.0.1`), so use
+`--network host` and let nginx proxy the registered callback path to
+`127.0.0.1:oauth_bind_port`.
 
 ## Testing
 

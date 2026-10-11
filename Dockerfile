@@ -34,9 +34,13 @@ COPY --from=builder /app/resources /app/resources
 #   twitch_client_id, twitch_client_secret, twitch_redirect_uri,
 #   oauth_bind_host, oauth_bind_port, database_url, users_resync_interval,
 #   amqp_dsn, amqp_queue
-# Runs the chat consumer; the OAuth server is `uvicorn src.main:app`.
+# Runs both entry points in one container via src.supervisor: the chat
+# consumer (`python -m src`) and the OAuth callback server
+# (`uvicorn src.main:app`). The OAuth server binds oauth_bind_host (default
+# 127.0.0.1), so run the container with --network host to put the callback on
+# the host loopback where a reverse proxy (or SSH tunnel) can reach it.
 # Run as an unprivileged user; nothing is written to the filesystem at
 # runtime (yoyo migration state lives in the database).
 USER nobody
 
-CMD ["python", "-m", "src"]
+CMD ["python", "-m", "src.supervisor"]

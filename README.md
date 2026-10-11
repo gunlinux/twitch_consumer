@@ -140,8 +140,13 @@ make types   # mypy
 
 ```bash
 docker build -t twitch_consumer .
-docker run --env-file .env twitch_consumer
+docker run --network host --env-file .env twitch_consumer
 ```
 
-Point `database_url` in `.env` at your PostgreSQL; the container needs no
-mounted files.
+The image runs both entry points in one container (`python -m src.supervisor`):
+the chat consumer and the OAuth callback server. The callback binds
+`oauth_bind_host` (default `127.0.0.1`), so run on the host network
+(`--network host`) and proxy the registered callback path to
+`127.0.0.1:oauth_bind_port` from nginx (or reach it over an SSH tunnel). Point
+`database_url` in `.env` at your PostgreSQL; the container needs no mounted
+files.
